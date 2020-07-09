@@ -1,0 +1,61 @@
+kind: pipeline
+name: plink
+
+steps:
+- name: Maven编译
+  image: maven:3-jdk-7
+  volumes:
+  - name: cache
+    path: /root/.m2
+  commands:
+    - mvn clean install
+
+- name: 构建镜像
+  image: plugins/docker
+  volumes:
+  - name: docker
+    path: /var/run/docker.sock
+  settings:
+    username:
+      from_secret: docker_user
+    password:
+      from_secret: docker_pass
+    repo: {your-repo}
+    registry: {your-registry}
+    tags: ${DRONE_BUILD_NUMBER}
+
+- name: Kubernetes 部署
+  image: guoxudongdocker/kubectl:v1.14.1
+  volumes:
+  - name: kube
+    path: /root/.kube
+  commands:
+    - sed -i "s/#Tag/${DRONE_BUILD_NUMBER}/g" deployment.yaml
+    - kubectl apply -f deployment.yaml
+
+- name: 钉钉通知
+  image: guoxudongdocker/drone-dingtalk
+  settings:
+    token:
+      from_secret: dingding
+    type: markdown
+    message_color: true
+    message_pic: true
+    sha_link: true
+  when:
+    status: [failure, success]
+
+volumes:
+- name: cache
+  host:
+    path: /tmp/cache/.m2
+- name: kube
+  host:
+    path: /tmp/cache/.kube/.test_kube
+- name: docker
+  host:
+    path: /var/run/docker.sock
+
+trigger:
+  branch:
+  - master
