@@ -14,4 +14,4 @@ echo "flush privileges;" >> /opt/plink_init.sql
 /usr/bin/mysql -uroot -p${MYSQL_ROOT_PASSWORD} < /opt/plink_init.sql > /var/log/mysql-init-plink.log 2>&1
 
 ## plink
-java -jar /opt/plink.jar
+/bin/bash /opt/plink/bin/run.sh
